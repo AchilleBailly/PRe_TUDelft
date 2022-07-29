@@ -6,16 +6,11 @@ extern crate tensorflow;
 extern crate vec;
 
 use crate::dataloader::hdf5::H5Type;
-use hdf5::types::CompoundType;
 use ndarray::Array0;
-use ndarray::{s, stack, Array, Array1, Array2, ArrayBase, ArrayView1, Axis, OwnedRepr};
-use std::array;
+use ndarray::{s, Array1};
 use std::error::Error;
-use std::fmt;
-use std::ops::Index;
-use tensorflow::Tensor;
+use std::fmt::{self};
 
-use hdf5::Dataset;
 use hdf5::File;
 
 struct OutOfBounds;
@@ -67,11 +62,13 @@ pub struct Dataloader {
     byte_index: usize,
 }
 
-struct Metadata<'a> {
-    pt: &'a [u8; 16],
-    ct: &'a [u8; 16],
-    key: &'a [u8; 16],
-    masks: &'a [u8; 16],
+#[repr(C)]
+#[derive(H5Type, Debug)]
+struct Metadata {
+    plaintext: [u8; 16],
+    ciphertext: [u8; 16],
+    key: [u8; 16],
+    masks: [u8; 16],
 }
 
 impl Dataloader {
@@ -139,31 +136,14 @@ impl Dataloader {
             .dataset("traces")?
             .read_slice(s![index, ..self.trace_length])?;
 
-        type metadata_type = ([u8; 16], [u8; 16], [u8; 16], [u8; 16]);
-        let t: Array0<metadata_type> = self.files[file_number]
+        let md: Array0<Metadata> = self.files[file_number]
             .dataset("metadata")?
             .read_slice(s![index])?;
 
-        // println!("datasets: {:?}", t);
-        // println!(
-        //     "Type descriptor (file): {:#?}",
-        //     self.files[file_number]
-        //         .dataset("metadata")?
-        //         .dtype()?
-        //         .to_descriptor()?
-        // );
-        // println!(
-        //     "Type descriptor (mine): {:#?}",
-        //     metadata_type::type_descriptor()
-        // );
-
-        // println!("Traces: {:?}", trace);
-        let md: Array0<metadata_type> = self.files[file_number]
-            .dataset("metadata")?
-            .read_slice(s![index])?;
-        let label_int = md.first().unwrap().2[self.byte_index] as usize;
+        let label_int = md.first().unwrap().key[self.byte_index] as usize;
         let mut label = vec![0.0; 256];
         label[label_int] = 1.0;
+
         return Ok((trace.to_vec(), label));
     }
 

@@ -4,15 +4,10 @@ extern crate vec;
 
 use std::error::Error;
 
-use rand::random;
-
 pub mod dataloader;
 use crate::dataloader::Dataloader;
 
-use tensorflow::{
-    train::Optimizer, Graph, SavedModelBundle, SessionOptions, SessionRunArgs, Tensor,
-    DEFAULT_SERVING_SIGNATURE_DEF_KEY,
-};
+use tensorflow::{Graph, SavedModelBundle, SessionOptions, SessionRunArgs, Tensor};
 
 fn train() -> Result<(), Box<dyn Error>> {
     //Create some tensors to feed to the model for training, one as input and one as the target value
@@ -42,14 +37,11 @@ fn train() -> Result<(), Box<dyn Error>> {
 
     // Train the model (e.g. for fine tuning).
     for i in 0..2 {
-        println!("Start of loop");
         let (trace, label) = dl.get(i as usize)?;
-        println!("label: {:?}", label);
 
-        let mut input_tensor: Tensor<f32> =
+        let input_tensor: Tensor<f32> =
             Tensor::new(&[1, 99500, 1]).with_values(trace.as_slice())?;
-        let mut label_tensor: Tensor<f32> =
-            Tensor::new(&[1, 256, 1]).with_values(label.as_slice())?;
+        let label_tensor: Tensor<f32> = Tensor::new(&[1, 256, 1]).with_values(label.as_slice())?;
         let mut output_tensor: Tensor<f32> = Tensor::new(&[1, 256, 1]);
         let mut loss_tensor: Tensor<f32> = Tensor::new(&[1, 1]);
 
